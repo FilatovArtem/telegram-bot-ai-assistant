@@ -102,12 +102,12 @@ ssh-keyscan -t ed25519,rsa $(hostname -f) 2>/dev/null
 
 | Secret | Значение | Пример |
 |---|---|---|
-| `SSH_HOST` | публичный IP или DNS сервера | `95.165.71.0` |
-| `SSH_USER` | имя пользователя | `admin` |
-| `SSH_PORT` | (опционально) | `22` |
-| `SSH_PRIVATE_KEY` | весь приватный ключ из шага 4 (включая `-----BEGIN/END-----`) | многострочный текст |
-| `SSH_KNOWN_HOSTS` | вывод `ssh-keyscan` из шага 4 | многострочный текст |
-| `REPO_DIR` | (опционально) полный путь | `/home/admin/telegram-bot-ai-assistant` |
+| `DEPLOY_HOST` | публичный IP или DNS сервера | `95.165.71.0` |
+| `DEPLOY_USER` | имя пользователя | `admin` |
+| `DEPLOY_PORT` | (опционально) | `22` |
+| `DEPLOY_SSH_KEY` | весь приватный ключ из шага 4 (включая `-----BEGIN/END-----`) | многострочный текст |
+| `DEPLOY_KNOWN_HOSTS` | вывод `ssh-keyscan` из шага 4 | многострочный текст |
+| `DEPLOY_PATH` | (опционально) полный путь | `/home/admin/telegram-bot-ai-assistant` |
 
 ### Шаг 6 — Тригер первого auto-deploy
 

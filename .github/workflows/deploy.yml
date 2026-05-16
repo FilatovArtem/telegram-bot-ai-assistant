@@ -1,13 +1,14 @@
 name: Deploy
 
 # Auto-deploys to the home server after CI succeeds on main.
+# Shared secret names with sibling bots (telegram-bot-business-card, tma-food-demo).
 # Required repo secrets:
-#   SSH_HOST          - server hostname or IP
-#   SSH_USER          - SSH user (e.g. admin)
-#   SSH_PORT          - SSH port (optional, default 22)
-#   SSH_PRIVATE_KEY   - deploy key (whole file, including BEGIN/END lines)
-#   SSH_KNOWN_HOSTS   - output of `ssh-keyscan -t ed25519,rsa <host>`
-#   REPO_DIR          - optional override (default $HOME/telegram-bot-ai-assistant)
+#   DEPLOY_HOST          - server hostname or IP
+#   DEPLOY_USER          - SSH user (e.g. admin)
+#   DEPLOY_PORT          - SSH port (optional, default 22)
+#   DEPLOY_SSH_KEY       - private key contents (whole file with BEGIN/END)
+#   DEPLOY_KNOWN_HOSTS   - output of `ssh-keyscan -t ed25519,rsa <host>`
+#   DEPLOY_PATH          - optional override (default /home/admin/telegram-bot-ai-assistant)
 
 on:
   workflow_run:
@@ -34,12 +35,12 @@ jobs:
             && github.event.workflow_run.head_branch == 'main')
       }}
     env:
-      SSH_HOST: ${{ secrets.SSH_HOST }}
-      SSH_USER: ${{ secrets.SSH_USER }}
-      SSH_PORT: ${{ secrets.SSH_PORT || '22' }}
-      REPO_DIR: ${{ secrets.REPO_DIR || '$HOME/telegram-bot-ai-assistant' }}
-      SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-      SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
+      DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+      DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+      DEPLOY_PORT: ${{ secrets.DEPLOY_PORT || '22' }}
+      DEPLOY_PATH: ${{ secrets.DEPLOY_PATH || '/home/admin/telegram-bot-ai-assistant' }}
+      DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+      DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
     steps:
       - name: Setup SSH
         run: |
@@ -47,8 +48,8 @@ jobs:
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
           umask 077
-          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
-          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/.ssh/known_hosts
           chmod 600 ~/.ssh/deploy_key ~/.ssh/known_hosts
 
       - name: Run deploy.sh on server
@@ -58,9 +59,9 @@ jobs:
               -o UserKnownHostsFile=~/.ssh/known_hosts \
               -o StrictHostKeyChecking=yes \
               -o ServerAliveInterval=30 \
-              -p "$SSH_PORT" \
-              "$SSH_USER@$SSH_HOST" \
-              "bash $REPO_DIR/deploy/scripts/deploy.sh"
+              -p "$DEPLOY_PORT" \
+              "$DEPLOY_USER@$DEPLOY_HOST" \
+              "bash $DEPLOY_PATH/deploy/scripts/deploy.sh"
 
       - name: Smoke check via SSH
         if: success()
@@ -68,6 +69,6 @@ jobs:
           set -euo pipefail
           ssh -i ~/.ssh/deploy_key \
               -o UserKnownHostsFile=~/.ssh/known_hosts \
-              -p "$SSH_PORT" \
-              "$SSH_USER@$SSH_HOST" \
+              -p "$DEPLOY_PORT" \
+              "$DEPLOY_USER@$DEPLOY_HOST" \
               "curl -fsS -m 5 http://127.0.0.1:8000/health"
