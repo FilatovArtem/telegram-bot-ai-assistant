@@ -71,4 +71,4 @@ jobs:
               -o UserKnownHostsFile=~/.ssh/known_hosts \
               -p "$DEPLOY_PORT" \
               "$DEPLOY_USER@$DEPLOY_HOST" \
-              "curl -fsS -m 5 http://127.0.0.1:8000/health"
+              "port=\$(grep -E '^API_PORT=' $DEPLOY_PATH/.env 2>/dev/null | tail -1 | cut -d= -f2- | tr -d '\\r\\n ' || true); port=\${port:-8000}; curl -fsS -m 5 http://127.0.0.1:\$port/health"
