@@ -47,13 +47,13 @@ fi
 mkdir -p data/knowledge data/faiss_index
 
 # 5. Next steps
-cat <<EOF
+cat <<'EOF'
 
 [bootstrap] DONE.
 Next steps on this server:
 
   1. Edit .env and fill in secrets:
-       nano $REPO_DIR/.env
+       nano <REPO_DIR>/.env
      Required: BOT_TOKEN, ADMIN_IDS, OPENAI_API_KEY, API_ADMIN_TOKEN
      Optional (for proxy):
        TELEGRAM_PROXY=http://host.docker.internal:10808
@@ -61,14 +61,14 @@ Next steps on this server:
        NO_PROXY=localhost,127.0.0.1
 
   2. First deploy:
-       bash $REPO_DIR/deploy/scripts/deploy.sh
+       bash <REPO_DIR>/deploy/scripts/deploy.sh
 
   3. Configure GitHub repo secrets (for auto-deploy on push):
-       SSH_HOST=95.165.71.0   (or hostname)
-       SSH_USER=admin
-       SSH_PRIVATE_KEY=<contents of ~/.ssh/<deploy-key>>
-       SSH_KNOWN_HOSTS=$(ssh-keyscan -t ed25519,rsa <host> 2>/dev/null)
+       DEPLOY_HOST=95.165.71.0   (or hostname)
+       DEPLOY_USER=admin
+       DEPLOY_SSH_KEY=<contents of ~/.ssh/<deploy-key>>
+       DEPLOY_KNOWN_HOSTS=<output of: ssh-keyscan -t ed25519,rsa <host>>
 
-  4. Push to main → GitHub Actions runs CI then SSH-deploys.
+  4. Push to main -> GitHub Actions runs CI then SSH-deploys.
 
 EOF
