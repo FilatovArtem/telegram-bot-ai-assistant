@@ -172,6 +172,123 @@ curl -H "X-Api-Key: $API_ADMIN_TOKEN" http://localhost:8000/api/stats
 
 ---
 
+## 6.5 Бесплатные альтернативы OpenAI
+
+Все эти провайдеры **OpenAI-compatible** — меняешь только `OPENAI_API_KEY`, `OPENAI_BASE_URL` и `OPENAI_MODEL` в `.env`. Код не трогается.
+
+### Сравнение (на май 2026)
+
+| Провайдер | Chat | Embeddings | Бесплатно | Best for |
+|---|---|---|---|---|
+| **Groq** | Llama 3.3 70B, gpt-oss-120b | ❌ | 30 RPM, no card | Быстрый chat |
+| **Cerebras** | Llama 3.3 70B | ❌ | 1M tok/день, no card | Speed-critical |
+| **OpenRouter free** | Llama 4, DeepSeek R1, Qwen3 | ❌ | 20 RPM, 50/день (1000/день с $10 balance) | Variety |
+| **DeepSeek** | V4, R1 | 1024d | $5 credit стартовый, потом $0.14/1M | Цена/качество |
+| **Together** | Llama, Mistral | bge-large 1024d | $5 credit | Один ключ chat+embed |
+| **Ollama (self-host)** | Llama, Qwen, Mistral | nomic, bge | Бесплатно forever | Privacy, zero cost |
+| **OpenAI** | gpt-4o-mini | text-embedding-3-small | $0.55/мес @ 1k req/d | Качество (reference) |
+
+### Рекомендованная комбинация для homelab
+
+**Groq (chat) + Ollama (embed)** — оба бесплатные навсегда:
+- Chat быстрый через Groq cloud (Llama 3.3 70B), бесплатные 30 запросов/мин.
+- Embeddings локально через Ollama на сервере (модель `nomic-embed-text`, 274MB, по бенчмаркам обходит `text-embedding-3-small`).
+- Хватит для MVP / демо / личных проектов. Лимит Groq 30 RPM хватает на 1 пользователя бота со spam-throttle.
+
+#### Шаги — Groq
+
+1. [console.groq.com](https://console.groq.com) → войти через GitHub/Google (free, no card).
+2. `API Keys` → `Create API Key` → имя `tg-ai-assistant`.
+3. Скопировать ключ `gsk_...`.
+
+#### Шаги — Ollama на сервере
+
+```bash
+ssh nixos-home-server
+
+# 1. Установка (через docker — проще на NixOS без sudo)
+docker volume create ollama-models
+docker run -d --name ollama \
+  --restart unless-stopped \
+  -v ollama-models:/root/.ollama \
+  -p 127.0.0.1:11434:11434 \
+  ollama/ollama:latest
+
+# 2. Скачать модель embeddings (274MB, ~10 сек)
+docker exec ollama ollama pull nomic-embed-text
+
+# 3. Проверить
+curl http://127.0.0.1:11434/v1/embeddings \
+  -d '{"model":"nomic-embed-text","input":"hello"}' | head -c 200
+```
+
+#### `.env` для Groq + Ollama
+
+```env
+# Chat через Groq
+OPENAI_API_KEY=gsk_твой_groq_ключ
+OPENAI_BASE_URL=https://api.groq.com/openai/v1
+OPENAI_MODEL=llama-3.3-70b-versatile
+
+# Embeddings через Ollama (host.docker.internal → 127.0.0.1 хоста)
+EMBEDDING_API_KEY=ollama
+EMBEDDING_BASE_URL=http://host.docker.internal:11434/v1
+EMBEDDING_MODEL=nomic-embed-text
+EMBEDDING_DIM=768
+```
+
+### Альтернатива A — Только DeepSeek ($5 credit на старте)
+
+DeepSeek даёт **5M tokens бесплатных credit-ов** новому аккаунту. На ~30k запросов хватит. Потом $0.14/1M input — дешевле OpenAI в 50 раз. Embeddings нет публичных — придётся либо OpenAI, либо Ollama.
+
+```env
+OPENAI_API_KEY=sk-твой_deepseek_ключ
+OPENAI_BASE_URL=https://api.deepseek.com
+OPENAI_MODEL=deepseek-chat
+
+# Embeddings — Ollama локально, как выше
+EMBEDDING_API_KEY=ollama
+EMBEDDING_BASE_URL=http://host.docker.internal:11434/v1
+EMBEDDING_MODEL=nomic-embed-text
+EMBEDDING_DIM=768
+```
+
+[platform.deepseek.com](https://platform.deepseek.com/) → Sign up → API Keys → Create.
+
+### Альтернатива B — Всё через Ollama (zero cost forever)
+
+Запустить chat-модель локально. **Минус**: 8B-модель на CPU ~1-3 tok/sec — слишком медленно для интерактивного бота. Подходит только если есть GPU или согласен на 15+ сек ответа.
+
+```bash
+docker exec ollama ollama pull llama3.1:8b-instruct-q4_K_M
+docker exec ollama ollama pull nomic-embed-text
+```
+
+```env
+OPENAI_API_KEY=ollama
+OPENAI_BASE_URL=http://host.docker.internal:11434/v1
+OPENAI_MODEL=llama3.1:8b-instruct-q4_K_M
+EMBEDDING_MODEL=nomic-embed-text
+EMBEDDING_DIM=768
+```
+
+### Что нужно учесть при смене провайдера
+
+1. **При смене embedding model меняется `EMBEDDING_DIM`** — пересобрать индекс с нуля. Безопаснее всего удалить volume FAISS:
+   ```bash
+   docker compose down
+   docker volume rm telegram-bot-ai-assistant_bot-data
+   docker compose up -d --build
+   # Документы придётся загрузить заново (TG → /admin → upload).
+   ```
+2. **Anti-injection system prompt** написан для GPT-семейства. На Llama 3.3 70B и DeepSeek работает не хуже. На малых моделях (7B и меньше) — может ломаться, требуется тест.
+3. **RAG threshold 0.75** калиброван на cosine от OpenAI embeddings. Для nomic-embed/BGE распределение может быть другим — может понадобиться подкрутить `RELEVANCE_THRESHOLD` после первых тестов.
+4. **Groq + xray proxy**: если `HTTPS_PROXY=http://host.docker.internal:10808` стоит, Groq пойдёт через него — норм (Groq доступен глобально). Если xray ломает соединение к `api.groq.com` — добавь `NO_PROXY=...,.groq.com` в `.env`.
+
+Источники: [Groq Console](https://console.groq.com), [Ollama embedding models](https://ollama.com/blog/embedding-models), [Free AI APIs 2026 — TokenMix](https://tokenmix.ai/blog/free-llm-api), [DeepSeek API Docs](https://api-docs.deepseek.com/).
+
+---
+
 ## Пример заполненного `.env`
 
 ```dotenv

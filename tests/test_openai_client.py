@@ -68,7 +68,7 @@ class TestEmbeddings:
     async def test_batch_single_call_for_50(self, monkeypatch: pytest.MonkeyPatch) -> None:
         client = _make_client(monkeypatch)
         create = AsyncMock(side_effect=lambda model, input: _fake_embedding_response(input))
-        monkeypatch.setattr(client._client.embeddings, "create", create)
+        monkeypatch.setattr(client._embed_client.embeddings, "create", create)
         texts = [f"text {i}" for i in range(50)]
         result = await client.get_embeddings_batch(texts)
         assert len(result) == 50
@@ -77,7 +77,7 @@ class TestEmbeddings:
     async def test_batch_splits_at_100(self, monkeypatch: pytest.MonkeyPatch) -> None:
         client = _make_client(monkeypatch)
         create = AsyncMock(side_effect=lambda model, input: _fake_embedding_response(input))
-        monkeypatch.setattr(client._client.embeddings, "create", create)
+        monkeypatch.setattr(client._embed_client.embeddings, "create", create)
         texts = [f"t{i}" for i in range(250)]
         result = await client.get_embeddings_batch(texts)
         assert len(result) == 250
@@ -100,7 +100,7 @@ class TestEmbeddings:
             return resp
 
         monkeypatch.setattr(
-            client._client.embeddings,
+            client._embed_client.embeddings,
             "create",
             AsyncMock(side_effect=shuffled),
         )
@@ -118,7 +118,7 @@ class TestEmbeddings:
             _fake_embedding_response(["ok"]),
         ]
         create = AsyncMock(side_effect=seq)
-        monkeypatch.setattr(client._client.embeddings, "create", create)
+        monkeypatch.setattr(client._embed_client.embeddings, "create", create)
 
         async def no_sleep(*_a: Any, **_kw: Any) -> None:
             return None
@@ -131,7 +131,7 @@ class TestEmbeddings:
     async def test_propagates_non_retryable(self, monkeypatch: pytest.MonkeyPatch) -> None:
         client = _make_client(monkeypatch)
         create = AsyncMock(side_effect=ValueError("bad request"))
-        monkeypatch.setattr(client._client.embeddings, "create", create)
+        monkeypatch.setattr(client._embed_client.embeddings, "create", create)
         with pytest.raises(ValueError, match="bad request"):
             await client.get_embeddings_batch(["x"])
 
@@ -140,7 +140,7 @@ class TestEmbeddings:
 
         client = _make_client(monkeypatch)
         create = AsyncMock(side_effect=lambda model, input: _fake_embedding_response(input))
-        monkeypatch.setattr(client._client.embeddings, "create", create)
+        monkeypatch.setattr(client._embed_client.embeddings, "create", create)
         before = openai_tokens_total.labels(
             model="text-embedding-3-small",
             type="embedding",

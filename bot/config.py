@@ -30,6 +30,13 @@ class Settings(BaseSettings):
     openai_timeout_seconds: float = 30.0
     openai_max_retries: int = 6
 
+    # Optional overrides for OpenAI-compatible providers (Groq, DeepSeek,
+    # Ollama, Together, OpenRouter, ...). Empty = use OpenAI defaults.
+    openai_base_url: str | None = None
+    embedding_base_url: str | None = None
+    embedding_api_key: SecretStr | None = None  # default → reuses openai_api_key
+    embedding_dim: int = 1536
+
     relevance_threshold: float = 0.75
     relevance_min_gap: float = 0.05
     rerank_enabled: bool = False

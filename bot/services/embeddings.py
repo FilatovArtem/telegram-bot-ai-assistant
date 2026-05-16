@@ -25,7 +25,7 @@ from bot.observability.metrics import (
 )
 from bot.services.chunking import Chunk
 
-EMBEDDING_DIM: Final[int] = 1536
+EMBEDDING_DIM: Final[int] = settings.embedding_dim
 SCHEMA_VERSION: Final[int] = 1
 INDEX_FILE: Final[str] = "index.faiss"
 CHUNKS_FILE: Final[str] = "chunks.json"

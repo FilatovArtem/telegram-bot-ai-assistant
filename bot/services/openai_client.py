@@ -74,8 +74,24 @@ class OpenAIClient:
         embed_model: str,
         timeout: float = 30.0,
         max_retries: int = 6,
+        chat_base_url: str | None = None,
+        embed_api_key: str | None = None,
+        embed_base_url: str | None = None,
     ) -> None:
-        self._client = AsyncOpenAI(api_key=api_key, timeout=timeout, max_retries=0)
+        # Two independent clients to allow mixing providers
+        # (e.g. Groq for chat + Ollama for embeddings).
+        self._client = AsyncOpenAI(
+            api_key=api_key,
+            base_url=chat_base_url or None,
+            timeout=timeout,
+            max_retries=0,
+        )
+        self._embed_client = AsyncOpenAI(
+            api_key=embed_api_key or api_key,
+            base_url=embed_base_url or chat_base_url or None,
+            timeout=timeout,
+            max_retries=0,
+        )
         self._chat_model = chat_model
         self._embed_model = embed_model
         self._max_retries = max_retries
@@ -105,7 +121,7 @@ class OpenAIClient:
         try:
             async for attempt in self._retrying():
                 with attempt:
-                    response = await self._client.embeddings.create(
+                    response = await self._embed_client.embeddings.create(
                         model=self._embed_model,
                         input=batch,
                     )
@@ -180,10 +196,14 @@ class OpenAIClient:
 
 
 def make_openai_client() -> OpenAIClient:
+    embed_key = settings.embedding_api_key.get_secret_value() if settings.embedding_api_key else None
     return OpenAIClient(
         api_key=settings.openai_api_key.get_secret_value(),
         chat_model=settings.openai_model,
         embed_model=settings.embedding_model,
         timeout=settings.openai_timeout_seconds,
         max_retries=settings.openai_max_retries,
+        chat_base_url=settings.openai_base_url,
+        embed_api_key=embed_key,
+        embed_base_url=settings.embedding_base_url,
     )
