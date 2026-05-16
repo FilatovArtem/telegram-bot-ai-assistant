@@ -1,0 +1,56 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Virtualenv
+.venv/
+venv/
+env/
+ENV/
+
+# Caches
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.hypothesis/
+
+# Environment
+.env
+.env.local
+.env.*.local
+*.env
+
+# Application data
+data/*.db
+data/*.db-journal
+data/faiss_index/
+data/uploads/
+
+# Editor / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# Logs
+logs/
+*.log
+
+# Build artifacts
+*.egg
+pip-wheel-metadata/
+pytest-cache-files-*/

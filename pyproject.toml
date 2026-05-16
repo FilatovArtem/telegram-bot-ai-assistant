@@ -1,0 +1,66 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["bot", "bot.db", "bot.middlewares", "bot.observability", "bot.services", "api"]
+
+[project]
+name = "telegram-bot-ai-assistant"
+version = "0.1.0"
+description = "Telegram AI assistant with RAG: answers questions from your knowledge base"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "aiogram>=3.13,<4",
+    "fastapi>=0.115,<1",
+    "uvicorn[standard]>=0.32",
+    "sqlalchemy[asyncio]>=2.0,<3",
+    "aiosqlite>=0.20",
+    "pydantic-settings>=2.0,<3",
+    "openai>=1.50",
+    "faiss-cpu>=1.9",
+    "numpy>=1.26,<2",
+    "tiktoken>=0.8",
+    "python-multipart>=0.0.12",
+    "tenacity>=9.0",
+    "structlog>=24.4",
+    "prometheus-client>=0.21",
+    "rank-bm25>=0.2.2",
+    "slowapi>=0.1.9",
+    "sentry-sdk[fastapi]>=2.0",
+]
+
+[project.optional-dependencies]
+postgres = ["asyncpg>=0.30"]
+rerank = ["flashrank>=0.2"]
+dev = [
+    "ruff>=0.8",
+    "mypy>=1.13",
+    "pytest>=8.0",
+    "pytest-asyncio>=0.24",
+    "pytest-mock>=3.14",
+    "httpx>=0.27",
+]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 110
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "UP", "ANN", "B", "A", "SIM"]
+ignore = ["ANN401"]
+extend-per-file-ignores = { "tests/*" = ["ANN", "B", "A002", "A006"] }
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+plugins = []
+
+[[tool.mypy.overrides]]
+module = ["aiogram.*", "faiss.*", "rank_bm25.*", "flashrank.*", "slowapi.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
