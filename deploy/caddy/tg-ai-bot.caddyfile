@@ -1,0 +1,47 @@
+# Caddy vhost snippet for exposing the bot's HTTP API behind the home-server's
+# shared 80/443. Append this block to /etc/caddy/caddy_config (or import it).
+#
+# After editing, on the NixOS host:
+#   sudo systemctl reload caddy
+#
+# The bot binds 127.0.0.1:8000 inside the host (via docker-compose),
+# Caddy terminates TLS and reverse-proxies. Let's Encrypt issues automatically
+# via the HTTP-01 challenge on port 80.
+#
+# Adjust the hostname (`tg-ai-bot.95.165.71.0.nip.io`) to your DNS / nip.io
+# label. nip.io maps `*.<ip>.nip.io` → <ip> with no DNS setup needed.
+
+tg-ai-bot.95.165.71.0.nip.io {
+    encode zstd gzip
+
+    # Public health probes (no auth) — keep open for monitoring/uptime
+    @public path /health /ready
+    handle @public {
+        reverse_proxy 127.0.0.1:8000
+    }
+
+    # /metrics — restrict to allowed IPs (replace 127.0.0.1/32 with your IP)
+    @metrics path /metrics
+    handle @metrics {
+        @allowed remote_ip 127.0.0.1/32
+        handle @allowed {
+            reverse_proxy 127.0.0.1:8000
+        }
+        respond 403
+    }
+
+    # Admin API — protected by X-Api-Key inside the app itself
+    handle /api/* {
+        reverse_proxy 127.0.0.1:8000
+    }
+
+    # Anything else → 404
+    handle {
+        respond 404
+    }
+
+    log {
+        output file /var/log/caddy/tg-ai-bot.access.log
+        format json
+    }
+}

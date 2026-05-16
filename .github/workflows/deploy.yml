@@ -1,0 +1,73 @@
+name: Deploy
+
+# Auto-deploys to the home server after CI succeeds on main.
+# Required repo secrets:
+#   SSH_HOST          - server hostname or IP
+#   SSH_USER          - SSH user (e.g. admin)
+#   SSH_PORT          - SSH port (optional, default 22)
+#   SSH_PRIVATE_KEY   - deploy key (whole file, including BEGIN/END lines)
+#   SSH_KNOWN_HOSTS   - output of `ssh-keyscan -t ed25519,rsa <host>`
+#   REPO_DIR          - optional override (default $HOME/telegram-bot-ai-assistant)
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: SSH deploy to home server
+    runs-on: ubuntu-latest
+    if: >-
+      ${{
+        github.event_name == 'workflow_dispatch'
+        || (github.event.workflow_run.conclusion == 'success'
+            && github.event.workflow_run.head_branch == 'main')
+      }}
+    env:
+      SSH_HOST: ${{ secrets.SSH_HOST }}
+      SSH_USER: ${{ secrets.SSH_USER }}
+      SSH_PORT: ${{ secrets.SSH_PORT || '22' }}
+      REPO_DIR: ${{ secrets.REPO_DIR || '$HOME/telegram-bot-ai-assistant' }}
+      SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+      SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
+    steps:
+      - name: Setup SSH
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          umask 077
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/deploy_key ~/.ssh/known_hosts
+
+      - name: Run deploy.sh on server
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/deploy_key \
+              -o UserKnownHostsFile=~/.ssh/known_hosts \
+              -o StrictHostKeyChecking=yes \
+              -o ServerAliveInterval=30 \
+              -p "$SSH_PORT" \
+              "$SSH_USER@$SSH_HOST" \
+              "bash $REPO_DIR/deploy/scripts/deploy.sh"
+
+      - name: Smoke check via SSH
+        if: success()
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/deploy_key \
+              -o UserKnownHostsFile=~/.ssh/known_hosts \
+              -p "$SSH_PORT" \
+              "$SSH_USER@$SSH_HOST" \
+              "curl -fsS -m 5 http://127.0.0.1:8000/health"

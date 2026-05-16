@@ -38,7 +38,11 @@ curl http://localhost:8000/health
 # {"status":"ok"}
 ```
 
-Подробные инструкции по получению ключей — [`docs/setup/01-tokens-and-keys.md`](docs/setup/01-tokens-and-keys.md).
+Подробные инструкции:
+- Получение ключей — [`docs/setup/01-tokens-and-keys.md`](docs/setup/01-tokens-and-keys.md)
+- Локальный деплой — [`docs/setup/02-deployment.md`](docs/setup/02-deployment.md)
+- Админ-гайд — [`docs/setup/03-admin-guide.md`](docs/setup/03-admin-guide.md)
+- **Self-host + auto-deploy через GitHub Actions** — [`docs/setup/04-server-deploy.md`](docs/setup/04-server-deploy.md)
 
 ## Пример диалога
 
