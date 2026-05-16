@@ -14,6 +14,7 @@ import structlog
 import uvicorn
 from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
+from aiogram.client.session.aiohttp import AiohttpSession
 from aiogram.enums import ParseMode
 from fastapi import FastAPI, HTTPException, Request, Response
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest, make_asgi_app
@@ -146,8 +147,13 @@ async def main() -> None:
     reranker = make_reranker(settings)
     vector_store_size.set(store.size)
 
+    bot_session: AiohttpSession | None = None
+    if settings.telegram_proxy:
+        bot_session = AiohttpSession(proxy=settings.telegram_proxy.get_secret_value())
+        logger.info("telegram.proxy.enabled")
     bot = Bot(
         token=settings.bot_token.get_secret_value(),
+        session=bot_session,
         default=DefaultBotProperties(parse_mode=ParseMode.HTML),
     )
     dp = Dispatcher()

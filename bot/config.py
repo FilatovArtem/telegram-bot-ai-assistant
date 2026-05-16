@@ -57,6 +57,8 @@ class Settings(BaseSettings):
 
     seed_sample_on_first_run: bool = True
 
+    telegram_proxy: SecretStr | None = None
+
     @field_validator("admin_ids", mode="before")
     @classmethod
     def _parse_admin_ids(cls, v: object) -> list[int]:
