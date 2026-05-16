@@ -6,10 +6,20 @@
 set -euo pipefail
 
 REPO_DIR="${REPO_DIR:-$HOME/telegram-bot-ai-assistant}"
-HEALTH_URL="${HEALTH_URL:-http://127.0.0.1:8000/health}"
 HEALTH_RETRIES="${HEALTH_RETRIES:-30}"
 HEALTH_INTERVAL="${HEALTH_INTERVAL:-2}"
 LOG_PREFIX="[deploy]"
+
+# Pick API_PORT from .env (fallback 8000) so the health check matches the
+# port the container actually binds. Multi-bot hosts override API_PORT in .env
+# to avoid collisions between bots running on the same machine.
+read_api_port() {
+  local port
+  if [[ -f "$REPO_DIR/.env" ]]; then
+    port=$(grep -E '^API_PORT=' "$REPO_DIR/.env" | tail -1 | cut -d= -f2- | tr -d '\r\n ' || true)
+  fi
+  echo "${port:-8000}"
+}
 
 log() { echo "${LOG_PREFIX} $*"; }
 die() { echo "${LOG_PREFIX} ERROR: $*" >&2; exit 1; }
@@ -33,7 +43,9 @@ fi
 log "building image + (re)creating container"
 docker compose up -d --build --remove-orphans
 
-log "waiting for /health (max ${HEALTH_RETRIES} × ${HEALTH_INTERVAL}s)"
+API_PORT=$(read_api_port)
+HEALTH_URL="${HEALTH_URL:-http://127.0.0.1:${API_PORT}/health}"
+log "waiting for ${HEALTH_URL} (max ${HEALTH_RETRIES} × ${HEALTH_INTERVAL}s)"
 for i in $(seq 1 "$HEALTH_RETRIES"); do
   if curl -fsS -m 3 "$HEALTH_URL" >/dev/null 2>&1; then
     log "health check passed on attempt $i"
