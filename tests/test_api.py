@@ -16,6 +16,8 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
+from bot.config import settings
+
 
 @pytest.fixture()
 def api_state(
@@ -88,7 +90,10 @@ def client(api_state: dict[str, Any]) -> Generator[TestClient, None, None]:
         yield c
 
 
-GOOD_KEY = "dummy-admin"
+# Read the same source `api/auth.py` compares against, instead of a literal
+# guess — `API_ADMIN_TOKEN` in CI's workflow env ("dummy") differs from the
+# conftest fallback ("dummy-admin") that a hardcoded key here used to assume.
+GOOD_KEY = settings.api_admin_token.get_secret_value()
 
 
 class TestPublic:
