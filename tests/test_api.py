@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import io
 from collections.abc import AsyncGenerator, Generator
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -19,11 +20,17 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 @pytest.fixture()
 def api_state(
     monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
     fresh_store: Any,
     retriever: Any,
     mock_openai: Any,
 ) -> Generator[dict[str, Any], None, None]:
-    engine = create_async_engine("sqlite+aiosqlite:///:memory:", future=True)
+    # A file-backed DB (not `:memory:`) so each event loop opens its own
+    # connection instead of sharing SQLAlchemy's StaticPool connection —
+    # `:memory:` forces StaticPool, which reuses one aiosqlite connection
+    # across the loop below and the TestClient's own portal loop, raising
+    # "Event loop is closed" once the loop that opened it is closed.
+    engine = create_async_engine(f"sqlite+aiosqlite:///{tmp_path / 'test.db'}", future=True)
     session_factory = async_sessionmaker(engine, expire_on_commit=False)
 
     import bot.db.engine as eng_mod  # noqa: PLC0415
@@ -49,7 +56,6 @@ def api_state(
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
 
-    asyncio.get_event_loop().run_until_complete(_init()) if False else None
     loop = asyncio.new_event_loop()
     try:
         loop.run_until_complete(_init())
