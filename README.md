@@ -46,6 +46,8 @@ curl http://localhost:8000/health
 
 ## Пример диалога
 
+> Иллюстративный пример на реальном seed-корпусе (`data/knowledge/sample_faq.md`) — но не живой прогон: для настоящего ответа нужен рабочий `OPENAI_API_KEY`, которого нет в среде, где готовился этот README. Ретривал (BM25+FAISS+RRF) и логика "честного не знаю" по порогу `RELEVANCE_THRESHOLD` — реальные, `[^1]`-цитирование и текст ответа LLM — реконструкция по формату из `bot/services/rag.py`, не сохранённый вывод модели.
+
 ```
 User: Какие курсы у вас есть?
 Bot: Мы предлагаем три курса: Python для начинающих (12 недель, 25 000 руб),
@@ -159,6 +161,8 @@ graph TD
 ## Contributing
 
 См. [`CONTRIBUTING.md`](CONTRIBUTING.md) — dev setup через `uv`, commit convention (Conventional Commits), quality gates (ruff + mypy + pytest).
+
+151 тест (`uv run pytest --cov=bot --cov=api --cov-report=term-missing`), покрытие `bot/`+`api/` в целом — 66%; на `bot/services/` (RAG-пайплайн) и `api/` — 89% и 78% соответственно, что выше цели ≥70% из `CLAUDE.md`. Общая цифра ниже за счёт aiogram-хендлеров и middlewares, часть которых по архитектуре тестируется через прямой вызов сервисного слоя, а не через полный TG-хендлер.
 
 ## License
 
