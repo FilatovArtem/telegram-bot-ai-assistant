@@ -26,11 +26,11 @@ jobs:
       - name: Install uv
         run: pip install uv
       - name: Install project (dev extras)
-        run: uv pip install --system ".[dev]"
+        run: uv sync --locked --extra dev
       - name: Ruff check
-        run: ruff check .
+        run: uv run ruff check .
       - name: Ruff format check
-        run: ruff format --check .
+        run: uv run ruff format --check .
 
   typecheck:
     name: mypy strict
@@ -44,9 +44,9 @@ jobs:
       - name: Install uv
         run: pip install uv
       - name: Install project (dev extras)
-        run: uv pip install --system ".[dev]"
+        run: uv sync --locked --extra dev
       - name: mypy
-        run: mypy bot api
+        run: uv run mypy bot api
 
   test:
     name: pytest
@@ -66,9 +66,9 @@ jobs:
       - name: Install uv
         run: pip install uv
       - name: Install project (dev extras)
-        run: uv pip install --system ".[dev]"
+        run: uv sync --locked --extra dev
       - name: pytest
-        run: pytest -v --tb=short
+        run: uv run pytest -v --tb=short
 
   docker:
     name: Docker build
