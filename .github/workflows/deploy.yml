@@ -1,6 +1,6 @@
 name: Deploy
 
-# Auto-deploys to the home server after CI succeeds on main.
+# Run manually from main after checking CI.
 # Shared secret names with sibling bots (telegram-bot-business-card, tma-food-demo).
 # Required repo secrets:
 #   DEPLOY_HOST          - server hostname or IP
@@ -11,10 +11,6 @@ name: Deploy
 #   DEPLOY_PATH          - optional override (default /home/admin/telegram-bot-ai-assistant)
 
 on:
-  workflow_run:
-    workflows: ["CI"]
-    types: [completed]
-    branches: [main]
   workflow_dispatch:
 
 concurrency:
@@ -28,12 +24,7 @@ jobs:
   deploy:
     name: SSH deploy to home server
     runs-on: ubuntu-latest
-    if: >-
-      ${{
-        github.event_name == 'workflow_dispatch'
-        || (github.event.workflow_run.conclusion == 'success'
-            && github.event.workflow_run.head_branch == 'main')
-      }}
+    if: github.ref == 'refs/heads/main'
     env:
       DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
       DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
