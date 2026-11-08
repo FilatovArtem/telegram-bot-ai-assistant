@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- Deployment through GitHub Actions runs manually from `main`. CI still runs automatically.
+
 ### Added
 - Initial MVP release scaffolding
 - RAG pipeline: BM25 + dense (FAISS) + RRF hybrid retrieval

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Server-side deploy script. Idempotent — safe to re-run.
 # Pull latest main, rebuild image, recreate container, verify health.
-# Triggered by .github/workflows/deploy.yml after CI succeeds, or run manually.
+# Invoked by the manual GitHub Actions Deploy workflow or directly on the server.
 
 set -euo pipefail
 

@@ -1,13 +1,11 @@
 # 04 — Self-host на сервере (CD через GitHub Actions)
 
-Этот гайд описывает деплой бота на свой Linux-сервер с auto-deploy на каждый push в `main`. Пример сервера — NixOS homelab (admin user в `docker` группе, Caddy на 80/443). Подойдёт любой Linux + Docker.
-
-> **Статус auto-deploy:** `Deploy` запускается через `workflow_run` от `CI` и требует `conclusion == 'success'` (см. `.github/workflows/deploy.yml`). За всю историю репозитория CI ни разу не зафиксировал успех (три прогона — три падения pytest), поэтому `Deploy` ни разу не выполнился — job стабильно уходит в `skipped`. Доказанная причина красного pytest — захардкоженный admin-key в тесте, разошедшийся с `API_ADMIN_TOKEN` из env самого CI-job'а (исправлено в ветке `integ/portfolio-20260921`); там же защитно убран потенциальный event-loop хазард в тестовой fixture, хотя падения именно от него подтвердить не удалось. Живого прогона `Deploy` после исправлений ещё не было — эта ветка не пушилась. Считайте инструкцию ниже описанием намерения, а не подтверждённым фактом, пока не увидите зелёную `Deploy` в Actions своими глазами.
+Инструкция по ручному деплою через GitHub Actions на Linux-сервер с Docker.
 
 ## Что получится
 
 1. Бот развёрнут как Docker-контейнер на твоём сервере.
-2. Каждый push в `main` → GitHub Actions запускает CI → если CI зелёный → SSH-ит на сервер → `git pull` + `docker compose up -d --build` → health-check.
+2. CI проверяет каждый push в `main`. Деплой запускается вручную из `main` после проверки CI.
 3. Секреты живут только в `.env` на сервере (chmod 600). В GitHub Secrets — только SSH-доступ.
 
 ## Один раз на сервере (bootstrap)
@@ -78,7 +76,7 @@ docker compose -f ~/telegram-bot-ai-assistant/docker-compose.yml logs -f bot
 
 В Telegram открой бот → `/start` → задай вопрос про курсы (sample FAQ загружается автоматически при первом запуске).
 
-## Один раз на GitHub (для auto-deploy)
+## Один раз на GitHub
 
 ### Шаг 4 — Создать deploy SSH-ключ (на сервере)
 
@@ -111,21 +109,9 @@ ssh-keyscan -t ed25519,rsa $(hostname -f) 2>/dev/null
 | `DEPLOY_KNOWN_HOSTS` | вывод `ssh-keyscan` из шага 4 | многострочный текст |
 | `DEPLOY_PATH` | (опционально) полный путь | `/home/admin/telegram-bot-ai-assistant` |
 
-### Шаг 6 — Тригер первого auto-deploy
+### Шаг 6. Запустить деплой
 
-Тривиальный push в `main`:
-
-```bash
-git commit --allow-empty -m "ci: trigger first deploy"
-git push origin main
-```
-
-Открой `Actions` на GitHub → дождись `CI` (lint + typecheck + test + docker build) → автоматически запустится `Deploy` workflow:
-- SSH к серверу
-- `bash $REPO_DIR/deploy/scripts/deploy.sh`
-- smoke-check `/health`
-
-Деплой можно запускать вручную: `Actions → Deploy → Run workflow → main`.
+Проверьте последний запуск CI на `main`. Если он успешен, выберите `Actions → Deploy → Run workflow → main`. Workflow подключится по SSH, выполнит `deploy/scripts/deploy.sh` и проверит `/health`.
 
 ## Публикация API наружу (опционально)
 
