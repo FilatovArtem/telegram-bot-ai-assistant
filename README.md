@@ -1,22 +1,18 @@
 # Telegram Bot AI Assistant
 
-> Production-ready Telegram-бот техподдержки на базе RAG (Retrieval-Augmented Generation). Отвечает на вопросы пользователей по вашей базе знаний с цитированием источников и эскалацией к оператору, если ответа в KB нет.
+> Демо Telegram-бота поддержки. Ищет ответы по базе знаний, цитирует документы и передаёт вопрос оператору при низкой релевантности результатов.
 
 ![Python](https://img.shields.io/badge/python-3.12-blue)
 ![License](https://img.shields.io/badge/license-Apache_2.0-green)
 ![Docker](https://img.shields.io/badge/docker-ready-blue)
 ![CI](https://img.shields.io/github/actions/workflow/status/FilatovArtem/telegram-bot-ai-assistant/ci.yml?branch=main&label=CI)
 
-## Зачем
-
-Команды техподдержки тратят до 70% времени на типовые вопросы, ответы на которые уже есть в FAQ и документации. Этот бот закрывает их автоматически, оставляя людям только нестандартные кейсы. Развёртывание — `docker compose up -d`, время до первого ответа — меньше 5 минут после получения ключей.
-
 ## Возможности
 
-- Гибридный поиск: BM25 (rank_bm25) + dense (FAISS cosine) + Reciprocal Rank Fusion. На 20–40% точнее голого top-k dense.
+- Гибридный поиск: BM25 (rank_bm25) + dense (FAISS cosine) + Reciprocal Rank Fusion.
 - Re-ranking через FlashRank cross-encoder (опционально, ENV-флаг).
 - Цитирование источников: каждый ответ содержит `[^N]` маркеры и список исходных файлов.
-- "Честное не знаю": если top-1 cosine ниже порога — бот не галлюцинирует, а передаёт оператору.
+- "Честное не знаю": если top-1 cosine ниже порога, бот передаёт вопрос оператору.
 - Hand-off оператору: вопрос с контекстом пересылается в `ADMIN_CHAT_ID` с inline-кнопкой "Взять в работу".
 - Feedback loop: 👍/👎 после каждого ответа, для негативных — опциональный комментарий.
 - Админ-панель в TG: загрузка `.md`/`.txt`, статистика, список и удаление документов с reindex.
@@ -42,7 +38,7 @@ curl http://localhost:8000/health
 - Получение ключей — [`docs/setup/01-tokens-and-keys.md`](docs/setup/01-tokens-and-keys.md)
 - Локальный деплой — [`docs/setup/02-deployment.md`](docs/setup/02-deployment.md)
 - Админ-гайд — [`docs/setup/03-admin-guide.md`](docs/setup/03-admin-guide.md)
-- **Self-host + auto-deploy через GitHub Actions** — [`docs/setup/04-server-deploy.md`](docs/setup/04-server-deploy.md)
+- **Self-host и ручной деплой через GitHub Actions** — [`docs/setup/04-server-deploy.md`](docs/setup/04-server-deploy.md)
 
 ## Пример диалога
 
@@ -158,6 +154,16 @@ graph TD
 - v1.2: webhook mode для production, multi-tenancy через `tenant_id` в БД, web admin UI, RBAC для админов.
 - v2.0: голос (Whisper STT + TTS), картинки (vision-модели), интеграции с Zendesk / Intercom.
 
+## Локальная проверка
+
+Тесты поиска и передачи оператору запускаются без реальных токенов. Понадобятся Python 3.12 и uv.
+
+```bash
+uv sync --locked --extra dev --python 3.12
+BOT_TOKEN=dummy OPENAI_API_KEY=sk-dummy API_ADMIN_TOKEN=dummy ADMIN_IDS=1 SEED_SAMPLE_ON_FIRST_RUN=false \
+  uv run --locked --extra dev pytest -q tests/test_retrieval.py tests/test_rag.py tests/test_handlers.py
+```
+
 ## Contributing
 
 См. [`CONTRIBUTING.md`](CONTRIBUTING.md) — dev setup через `uv`, commit convention (Conventional Commits), quality gates (ruff + mypy + pytest).
@@ -167,7 +173,3 @@ graph TD
 ## License
 
 [Apache License 2.0](LICENSE) — patent grant + trademark clause + change documentation. `SPDX-License-Identifier: Apache-2.0`.
-
-## Author
-
-Артём Филатов — [@Siki_sing](https://t.me/Siki_sing)
